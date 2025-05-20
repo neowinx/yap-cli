@@ -1,4 +1,4 @@
-# Pomodoro CLI
+# YAP-CLI - Yeat Another Pomodoro CLI Application
 
 A simple and efficient command-line Pomodoro timer with task management and reporting capabilities.
 
