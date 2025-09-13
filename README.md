@@ -39,15 +39,15 @@ Run the script:
 
 ### Main Menu Options
 
-1. **Add new task**
+1. **Add new task** (`1` or `a`)
    - Enter a description for your task
    - Tasks are stored in `tasks.txt`
 
-2. **List all tasks**
+2. **List all tasks** (`2` or `l`)
    - View all available tasks with their numbers
    - Useful for selecting tasks for pomodoro sessions
 
-3. **Start pomodoro session**
+3. **Start pomodoro session** (`3` or `s`)
    - Select a task from the list
    - Timer will start with a visual progress bar
    - Press Enter to pause or complete early
@@ -56,22 +56,57 @@ Run the script:
      - Switch to a different task
      - End the session
 
-4. **Generate report**
+4. **Generate report** (`4` or `r`)
    - Enter a date range (YYYY-MM-DD)
    - View completed pomodoros in CSV format
    - Reports include date, time, and task information
 
+5. **Exit** (`5` or `q`)
+   - Quit the application
+
+### Additional Menu Shortcuts
+
+- **Clear all tasks** (`c`) - Remove all tasks from the list (with confirmation)
+- **Delete specific task** (`d`) - Remove a specific task by number (with confirmation)
+- **Show help** (`h`) - Display all available keyboard shortcuts
+
 ### Timer Controls
 
 - The timer shows a progress bar and remaining time
-- **Keyboard shortcuts during timer:**
+- **Keyboard shortcuts during pomodoro timer:**
   - **F5** - Restart the current pomodoro
   - **Space** - Pause/Resume the timer
   - **Esc** - Stop the timer and exit
   - **Enter** - Pause and ask for early completion
+- **Keyboard shortcuts during breaks:**
+  - **Space** - Pause/Resume the break
+  - **Esc** - Skip the break
+  - **Enter** - Complete the break early
 - When paused, you can:
   - Complete the pomodoro early (y)
   - Continue the timer (n)
+
+### Complete Keyboard Shortcuts Reference
+
+#### Main Menu Shortcuts (Press key, no Enter needed)
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `1` or `a` | Add new task | Create a new task |
+| `2` or `l` | List all tasks | View all available tasks |
+| `3` or `s` | Start pomodoro session | Begin a pomodoro timer |
+| `4` or `r` | Generate report | Create a CSV report |
+| `5` or `q` | Exit | Quit the application |
+| `c` | Clear all tasks | Remove all tasks (with confirmation) |
+| `d` | Delete specific task | Remove a specific task (with confirmation) |
+| `h` | Show help | Display all shortcuts |
+
+#### Timer Shortcuts (Pomodoro & Breaks)
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `F5` | Restart | Restart current pomodoro |
+| `Space` | Pause/Resume | Toggle pause state |
+| `Esc` | Stop/Skip | Stop pomodoro or skip break |
+| `Enter` | Early completion | Pause and ask for early completion |
 
 ### Break System
 

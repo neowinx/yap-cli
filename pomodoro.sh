@@ -244,26 +244,100 @@ generate_report() {
     ' "$REPORT_FILE" | column -t -s,
 }
 
+# Function to show help/shortcuts
+show_help() {
+    echo -e "\n${BLUE}Keyboard Shortcuts:${NC}"
+    echo -e "${YELLOW}Main Menu (press key, no Enter needed):${NC}"
+    echo "  a, 1  - Add new task"
+    echo "  l, 2  - List all tasks"
+    echo "  s, 3  - Start pomodoro session"
+    echo "  r, 4  - Generate report"
+    echo "  c     - Clear all tasks"
+    echo "  d     - Delete specific task"
+    echo "  h     - Show this help"
+    echo "  q, 5  - Quit application"
+    echo -e "\n${YELLOW}During Pomodoro Timer:${NC}"
+    echo "  F5    - Restart current pomodoro"
+    echo "  Space - Pause/Resume timer"
+    echo "  Esc   - Stop timer and exit"
+    echo "  Enter - Pause and ask for early completion"
+    echo -e "\n${YELLOW}During Breaks:${NC}"
+    echo "  Space - Pause/Resume break"
+    echo "  Esc   - Skip break"
+    echo "  Enter - Complete break early"
+}
+
+# Function to clear all tasks
+clear_tasks() {
+    echo -e "\n${YELLOW}Are you sure you want to clear all tasks? (y/n)${NC}"
+    read -p "> " confirm
+    if [[ $confirm =~ ^[Yy]$ ]]; then
+        > "$TASKS_FILE"  # Clear the file
+        echo -e "${GREEN}All tasks cleared successfully!${NC}"
+    else
+        echo -e "${BLUE}Operation cancelled.${NC}"
+    fi
+}
+
+# Function to delete a specific task
+delete_task() {
+    if [ ! -s "$TASKS_FILE" ]; then
+        echo -e "${YELLOW}No tasks available to delete.${NC}"
+        return
+    fi
+    
+    list_tasks
+    read -p "Enter task number to delete: " task_num
+    if [[ $task_num =~ ^[0-9]+$ ]] && [ $task_num -gt 0 ]; then
+        local task_count=$(wc -l < "$TASKS_FILE")
+        if [ $task_num -le $task_count ]; then
+            local task_to_delete=$(sed -n "${task_num}p" "$TASKS_FILE")
+            echo -e "\n${YELLOW}Are you sure you want to delete: '$task_to_delete'? (y/n)${NC}"
+            read -p "> " confirm
+            if [[ $confirm =~ ^[Yy]$ ]]; then
+                sed -i "${task_num}d" "$TASKS_FILE"
+                echo -e "${GREEN}Task deleted successfully!${NC}"
+            else
+                echo -e "${BLUE}Operation cancelled.${NC}"
+            fi
+        else
+            echo -e "${RED}Invalid task number${NC}"
+        fi
+    else
+        echo -e "${RED}Invalid task number${NC}"
+    fi
+}
+
 # Main menu
 while true; do
     echo -e "\n${BLUE}Pomodoro CLI${NC}"
-    echo "1. Add new task"
-    echo "2. List all tasks"
-    echo "3. Start pomodoro session"
-    echo "4. Generate report"
-    echo "5. Exit"
+    echo "1. Add new task (a)"
+    echo "2. List all tasks (l)"
+    echo "3. Start pomodoro session (s)"
+    echo "4. Generate report (r)"
+    echo "5. Exit (q)"
+    echo -e "${YELLOW}Additional: c=Clear tasks, d=Delete task, h=Help${NC}"
+    echo -e "${YELLOW}Press any key to select (no Enter needed):${NC}"
     
-    read -p "Select an option (1-5): " choice
+    # Read single character without waiting for Enter
+    if [ -t 0 ]; then
+        # Interactive mode - use read -n 1
+        read -n 1 -s choice
+        echo  # Add newline after single character input
+    else
+        # Non-interactive mode (pipes) - use read normally
+        read choice
+    fi
     
     case $choice in
-        1)
+        1|a|A)
             read -p "Enter task description: " task_desc
             add_task "$task_desc"
             ;;
-        2)
+        2|l|L)
             list_tasks
             ;;
-        3)
+        3|s|S)
             list_tasks
             if [ -s "$TASKS_FILE" ]; then
                 read -p "Select task number: " task_num
@@ -275,17 +349,26 @@ while true; do
                 fi
             fi
             ;;
-        4)
+        4|r|R)
             read -p "Enter start date (YYYY-MM-DD): " start_date
             read -p "Enter end date (YYYY-MM-DD): " end_date
             generate_report "$start_date" "$end_date"
             ;;
-        5)
+        5|q|Q)
             echo -e "${GREEN}Goodbye!${NC}"
             exit 0
             ;;
+        c|C)
+            clear_tasks
+            ;;
+        d|D)
+            delete_task
+            ;;
+        h|H)
+            show_help
+            ;;
         *)
-            echo -e "${RED}Invalid option${NC}"
+            echo -e "${RED}Invalid option. Press 'h' for help or use the keys shown above.${NC}"
             ;;
     esac
 done 
