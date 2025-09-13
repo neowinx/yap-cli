@@ -64,7 +64,11 @@ Run the script:
 ### Timer Controls
 
 - The timer shows a progress bar and remaining time
-- Press Enter to pause the timer
+- **Keyboard shortcuts during timer:**
+  - **F5** - Restart the current pomodoro
+  - **Space** - Pause/Resume the timer
+  - **Esc** - Stop the timer and exit
+  - **Enter** - Pause and ask for early completion
 - When paused, you can:
   - Complete the pomodoro early (y)
   - Continue the timer (n)

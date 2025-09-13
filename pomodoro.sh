@@ -27,21 +27,39 @@ show_progress() {
     local task=$2
     local elapsed=0
     local width=50
+    local paused=false
     
     echo -e "\n${BLUE}Current Task: ${NC}$task"
     echo -e "${YELLOW}Time Remaining:${NC}"
-    echo -e "${YELLOW}Press Enter to pause or complete early${NC}"
+    echo -e "${YELLOW}Keyboard shortcuts: F5=Restart, Space=Pause/Resume, Esc=Stop${NC}"
     
-    # Function to read input without blocking
+    # Function to read input without blocking and handle special keys
     read_input() {
         # Use -N 1 to read exactly one character, including special characters
         if read -t 1 -N 1 input; then
-            # Check specifically for newline character (0x0a)
-            if [ "$input" = $'\x0a' ]; then
-                return 0
-            fi
+            # Check for special keys
+            case "$input" in
+                $'\x0a')  # Enter key
+                    return 0
+                    ;;
+                $'\x20')  # Space key
+                    return 1
+                    ;;
+                $'\x1b')  # Escape key
+                    return 2
+                    ;;
+                $'\x1b')  # F5 key (starts with escape)
+                    # F5 sends: ESC [ 1 5 ~
+                    if read -t 0.1 -N 1 next_char && [ "$next_char" = "[" ]; then
+                        if read -t 0.1 -N 3 f5_seq && [ "$f5_seq" = "15~" ]; then
+                            return 3
+                        fi
+                    fi
+                    return 2  # Treat as Esc if not F5
+                    ;;
+            esac
         fi
-        return 1
+        return 4  # No input
     }
     
     while [ $elapsed -lt $duration ]; do
@@ -54,20 +72,57 @@ show_progress() {
         printf "%${remaining_progress}s" | tr " " "-"
         printf "] %d:%02d" $((remaining / 60)) $((remaining % 60))
         
-        # Check for Enter key press
-        if read_input; then
-            echo -e "\n${YELLOW}Pomodoro paused. Do you want to complete it early? (y/n)${NC}"
-            read -p "> " complete_early
-            if [[ $complete_early =~ ^[Yy]$ ]]; then
-                echo -e "${GREEN}Completing pomodoro early...${NC}"
-                return 0
-            else
-                echo -e "${BLUE}Continuing pomodoro...${NC}"
-                echo -e "${YELLOW}Press Enter to pause or complete early${NC}"
-            fi
-        fi
+        # Check for keyboard input
+        read_input
+        local input_result=$?
         
-        elapsed=$((elapsed + 1))
+        case $input_result in
+            0)  # Enter key - pause and ask for early completion
+                echo -e "\n${YELLOW}Pomodoro paused. Do you want to complete it early? (y/n)${NC}"
+                read -p "> " complete_early
+                if [[ $complete_early =~ ^[Yy]$ ]]; then
+                    echo -e "${GREEN}Completing pomodoro early...${NC}"
+                    return 0
+                else
+                    echo -e "${BLUE}Continuing pomodoro...${NC}"
+                    echo -e "${YELLOW}Keyboard shortcuts: F5=Restart, Space=Pause/Resume, Esc=Stop${NC}"
+                fi
+                ;;
+            1)  # Space key - toggle pause/resume
+                if [ "$paused" = false ]; then
+                    paused=true
+                    echo -e "\n${YELLOW}Pomodoro PAUSED. Press Space to resume or Esc to stop${NC}"
+                    # Wait for space or escape while paused
+                    while [ "$paused" = true ]; do
+                        read_input
+                        local pause_input=$?
+                        case $pause_input in
+                            1)  # Space - resume
+                                paused=false
+                                echo -e "\n${GREEN}Resuming pomodoro...${NC}"
+                                ;;
+                            2)  # Esc - stop
+                                echo -e "\n${RED}Pomodoro stopped by user${NC}"
+                                return 1
+                                ;;
+                        esac
+                    done
+                fi
+                ;;
+            2)  # Esc key - stop pomodoro
+                echo -e "\n${RED}Pomodoro stopped by user${NC}"
+                return 1
+                ;;
+            3)  # F5 key - restart pomodoro
+                echo -e "\n${GREEN}Restarting pomodoro...${NC}"
+                return 2  # Special return code for restart
+                ;;
+        esac
+        
+        # Only increment elapsed time if not paused
+        if [ "$paused" = false ]; then
+            elapsed=$((elapsed + 1))
+        fi
     done
     echo
     return 0
@@ -97,22 +152,42 @@ start_pomodoro() {
     
     while true; do
         echo -e "\n${GREEN}Starting Pomodoro #$((pomodoro_count + 1))${NC}"
-        if ! show_progress $((WORK_TIME * 60)) "$task"; then
-            echo -e "${YELLOW}Pomodoro interrupted.${NC}"
-            break
-        fi
+        show_progress $((WORK_TIME * 60)) "$task"
+        local progress_result=$?
         
-        # Record the completed pomodoro with date and time
-        echo "$(date '+%Y-%m-%d %H:%M:%S'),$task,1" >> "$REPORT_FILE"
-        pomodoro_count=$((pomodoro_count + 1))
+        case $progress_result in
+            0)  # Completed normally
+                # Record the completed pomodoro with date and time
+                echo "$(date '+%Y-%m-%d %H:%M:%S'),$task,1" >> "$REPORT_FILE"
+                pomodoro_count=$((pomodoro_count + 1))
+                ;;
+            1)  # Interrupted/stopped
+                echo -e "${YELLOW}Pomodoro interrupted.${NC}"
+                break
+                ;;
+            2)  # Restart requested (F5)
+                echo -e "${BLUE}Restarting pomodoro for task: $task${NC}"
+                continue  # Skip to next iteration without incrementing count
+                ;;
+        esac
         
         # Check if it's time for a long break
         if [ $((pomodoro_count % POMODOROS_BEFORE_LONG_BREAK)) -eq 0 ]; then
             echo -e "\n${YELLOW}Time for a long break!${NC}"
             show_progress $((LONG_BREAK_TIME * 60)) "Long Break"
+            local break_result=$?
+            if [ $break_result -eq 1 ] || [ $break_result -eq 2 ]; then
+                echo -e "${YELLOW}Break interrupted.${NC}"
+                break
+            fi
         else
             echo -e "\n${YELLOW}Time for a short break!${NC}"
             show_progress $((BREAK_TIME * 60)) "Short Break"
+            local break_result=$?
+            if [ $break_result -eq 1 ] || [ $break_result -eq 2 ]; then
+                echo -e "${YELLOW}Break interrupted.${NC}"
+                break
+            fi
         fi
         
         echo -e "\n${BLUE}What would you like to do next?${NC}"
